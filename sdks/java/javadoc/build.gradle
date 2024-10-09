@@ -27,6 +27,56 @@ plugins { id 'org.apache.beam.module' }
 applyJavaNature(publish: false)
 description = "Apache Beam :: SDKs :: Java :: Aggregated Javadoc"
 
+// The following dependencies are excluded from javadoc external link due to
+// "Error fetching URL" in Java11+
+def excludedFromLink = [
+    'com.azure/azure-sdk-bom',
+    'io.cdap.cdap/cdap-api-common',
+    'io.cdap.cdap/cdap-common',
+    'io.cdap.cdap/cdap-etl-api-spark',
+    'io.cdap/hubspot-plugins',
+    'io.cdap.plugin/salesforce-plugins',
+    'io.cdap.plugin/servicenow-plugins',
+    'io.cdap.plugin/zendesk-plugins',
+    'com.google.api-ads/google-ads-stubs-v17',
+    'com.google.api-client/google-api-client-java6',
+    'com.google.apis/google-api-services-cloudresourcemanager',
+    'com.google.apis/google-api-services-healthcare',
+    'com.google.cloud.dataflow/google-cloud-dataflow-java-proto-library-all',
+    'com.google.cloud/libraries-bom',
+    'org.apache.hadoop/hadoop-client',
+    'org.apache.hadoop/hadoop-minicluster',
+    'com.fasterxml.jackson.module/jackson-module-scala_2.11',
+    'com.fasterxml.jackson.module/jackson-module-scala_2.12',
+    'com.github.jbellis/jamm',
+    'org.apache.logging.log4j/log4j-to-slf4j',
+    'org.apache.logging.log4j/log4j-slf4j-impl',
+    'org.mockito/mockito-inline',
+    'org.apache.nemo/nemo-compiler-frontend-beam',
+    'io.netty/netty-all',
+    'io.netty/netty-tcnative-boringssl-static',
+    'io.netty/netty-transport-native-epoll',
+    'com.singlestore/singlestore-jdbc-client',
+    'com.solacesystems/sol-jcsmp',
+    'org.apache.spark/spark-core_2.11',
+    'org.apache.spark/spark-streaming_2.11',
+    'org.apache.spark/spark-core_2.12',
+    'org.apache.spark/spark-network-common_2.12',
+    'org.apache.spark/spark-sql_2.12',
+    'org.apache.spark/spark-streaming_2.12',
+    'org.apache.tephra/tephra-api',
+    'org.testcontainers/azure',
+    'org.testcontainers/gcloud',
+    'org.testcontainers/solace',
+    'org.apache.beam/beam-vendor-grpc-1_60_1',
+    'org.apache.beam/beam-vendor-guava-32_1_2-jre',
+    'org.apache.beam/beam-vendor-calcite-1_28_0',
+    'org.codehaus.woodstox/woodstox-core-asl',
+    'org.apache.arrow/arrow-memory-core',
+    'org.apache.arrow/arrow-memory-netty',
+    'org.hamcrest/hamcrest',
+]
+
 for (p in rootProject.subprojects) {
   if (!p.path.equals(project.path) && !p.path.startsWith(':sdks:java:bom')) {
     evaluationDependsOn(p.path)
@@ -55,12 +105,20 @@ task allJavadoc() {
 task aggregateJavadoc(type: Javadoc) {
   def createJavadocIOUrlForDependency = {
     def dependency = dependencies.create(it)
-    return 'https://static.javadoc.io/' + dependency.getGroup() + '/' + dependency.getName() + '/' + dependency.getVersion()
+    def identifier = dependency.getGroup() + '/' + dependency.getName()
+    if (excludedFromLink.contains(identifier)) {
+      return ''
+    }
+    def url = 'https://static.javadoc.io/' + identifier
+    if (dependency.getVersion() != null) {
+      url += '/' + dependency.getVersion()
+    }
+    return url
   }
 
   def exportedJavadocProjects = getExportedJavadocProjects()
   source exportedJavadocProjects.collect { project(it).sourceSets.main.allJava }
-  classpath = files(exportedJavadocProjects.collect { project(it).sourceSets.main.compileClasspath })
+  classpath = files(exportedJavadocProjects.collect { project(it).sourceSets.main.runtimeClasspath })
   destinationDir = file("${buildDir}/docs/javadoc")
   failOnError = true
 
@@ -80,7 +138,10 @@ task aggregateJavadoc(type: Javadoc) {
     title "Apache Beam " + project.version
     overview 'overview.html'
     for (dep in project.library.java.values()) {
-      links createJavadocIOUrlForDependency(dep)
+      def link = createJavadocIOUrlForDependency(dep)
+      if (!link.isEmpty()) {
+        links link
+      }
     }
   }
 }

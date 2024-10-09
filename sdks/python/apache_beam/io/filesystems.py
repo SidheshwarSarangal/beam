@@ -398,7 +398,7 @@ class FileSystems(object):
     Args:
       path: string path to be reported.
       level: the level of file path. default to
-        :class:`~apache_beam.io.filesystem.FileSystem.Lineage`.FILE.
+        :class:`~apache_beam.io.filesystem.FileSystem.LineageLevel`.FILE.
     """
     filesystem = FileSystems.get_filesystem(path)
     filesystem.report_lineage(path, Lineage.sources(), level=level)
@@ -411,7 +411,7 @@ class FileSystems(object):
     Args:
       path: string path to be reported.
       level: the level of file path. default to
-        :class:`~apache_beam.io.filesystem.FileSystem.Lineage`.FILE.
+        :class:`~apache_beam.io.filesystem.FileSystem.LineageLevel`.FILE.
     """
     filesystem = FileSystems.get_filesystem(path)
     filesystem.report_lineage(path, Lineage.sinks(), level=level)
